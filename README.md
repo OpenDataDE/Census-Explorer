@@ -6,7 +6,7 @@ The first **"Population"** map requests population data from online the US Censu
 
 Generalization of this code could display many more of the data sets available from the US Census.
 
-The second **"Worker Flow"** map uses our own processed data from the census and calculates worker flows from home residence to place of work.
+The second **"Worker Flow"** map uses our own processed census data, ["LEHD Origin-Destination Employment Statistics"](http://lehdmap.did.census.gov./data/), which displays the flow of workers.
 
 ![Population Density Heatmap](https://raw.githubusercontent.com/OpenBracketDelaware/Open-Source-Target-Marketing-Solution-Group3/master/readme_images/population_heatmap.png "Population Density Heatmap")
 
