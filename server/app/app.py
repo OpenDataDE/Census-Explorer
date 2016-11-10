@@ -41,7 +41,8 @@ available_data_endpoints = {
     'commute-time': ('commute_time', 'Commute Time'),
     'income': ('income', 'Median Income'),
     'population': ('population', 'Population'),
-    'employment': ('employment_employed', 'Employeed'),
+    'employed': ('employment_employed', 'Employeed'),
+    'unemployed': ('employment_unemployed', 'Unemployeed'),
 }
 
 
