@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<script>
+
+    var max_workers_diff = 0;
+    var min_workers_diff = 0;
+
+    var zipcode_map = L.map('mapid').setView([39.745, -75.55], 15);
+
+    L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpandmbXliNDBjZWd2M2x6bDk3c2ZtOTkifQ._QA7i5Mpkd_m30IGElHziw', {
+        maxZoom: 18,
+        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+            '<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+            'Imagery &copy; <a href="http://mapbox.com">Mapbox</a>',
+        id: 'mapbox.light'
+    }).addTo(zipcode_map);
+
+
+    // control that shows state info on hover
+    var info = L.control();
+
+    info.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info');
+        this.update();
+        return this._div;
+    };
+
+    info.update = function (props) {
+        this._div.innerHTML = '<h4>DE Census blocks</h4>' +  (props ?
+            '<b>'+props.workers_in.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + ' workers in minus ' + props.workers_out.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + ' out for a difference of ' + props.workers_diff.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + '</b><br />'
+            : 'Hover over a block');
+    };
+
+    info.addTo(zipcode_map);
+
+    function mapRound(x){
+        return Math.ceil(x / 100.0) * 100
+    }
+
+    // get color depending on population density value
+    function getColor(d) {
+        //console.log('getting color for: '+d)
+        if (min_workers_diff > 0) {
+            min_workers_diff = 0;
+        }
+        //if (d >= 0) {
+        if (true) {
+            return d > mapRound(0.75*max_workers_diff) ? '#1b7837' :
+                d > mapRound(0.5*max_workers_diff)  ? '#5aae61' :
+                d > mapRound(0.25*max_workers_diff)   ? '#a6dba0' :
+                d > 0   ? '#d9f0d3' :
+                d == 0 ? '#FFFFFF' :
+                d > mapRound(0.25*min_workers_diff) ? '#e7d4e8' :
+                d > mapRound(0.50*min_workers_diff)  ? '#c2a5cf' :
+                d > mapRound(0.75*min_workers_diff)   ? '#9970ab' :
+                '#762a83' ;
+        }
+    }
+
+    function style(feature) {
+        return {
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            dashArray: '3',
+            fillOpacity: 0.7,
+            fillColor: getColor(feature.properties.workers_diff)
+        };
+    }
+
+    function highlightFeature(e) {
+        var layer = e.target;
+
+        layer.setStyle({
+            weight: 5,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.7
+        });
+
+        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+            layer.bringToFront();
+        }
+
+        info.update(layer.feature.properties);
+    }
+
+    var geojson;
+
+    function resetHighlight(e) {
+        geojson.resetStyle(e.target);
+        info.update();
+    }
+
+    function zoomToFeature(e) {
+        zipcode_map.fitBounds(e.target.getBounds());
+    }
+
+    function onEachFeature(feature, layer) {
+        layer.on({
+            mouseover: highlightFeature,
+            mouseout: resetHighlight,
+            //click: zoomToFeature
+        });
+    }
+
+    zipcode_map.attributionControl.addAttribution(
+        'Population data &copy; <a href="http://census.gov/">US Census Bureau</a>');
+
+
+    var legend = L.control({position: 'bottomright'});
+
+    legend.onAdd = function (map) {
+
+        if (min_workers_diff > 0) {
+            min_workers_diff = 0;
+        }
+
+        display_grades = [0, mapRound(0.25*max_workers_diff), mapRound(0.5*max_workers_diff), mapRound(0.75*max_workers_diff), mapRound(max_workers_diff)]
+
+        if (min_workers_diff < 0) {
+            display_grades = [mapRound(min_workers_diff), mapRound(0.75*min_workers_diff), mapRound(0.5*min_workers_diff), mapRound(0.25*min_workers_diff), 0, mapRound(0.25*max_workers_diff), mapRound(0.5*max_workers_diff), mapRound(0.75*max_workers_diff), mapRound(max_workers_diff)]
+
+            var div = L.DomUtil.create('div', 'info legend'),
+                //grades = [0, mapRound(0.05*max_workers_diff), mapRound(0.15*max_workers_diff), mapRound(0.30*max_workers_diff), mapRound(0.45*max_workers_diff), mapRound(0.60*max_workers_diff), mapRound(0.75*max_workers_diff), mapRound(0.90*max_workers_diff)],
+                
+
+                grades = display_grades,
+
+                labels = [],
+                from, to;
+
+            for (var i = 0; i < grades.length; i++) {
+                from = grades[i];
+                to = grades[i + 1];
+
+                if ( from == 0 ) {
+                    labels.push(
+                        '<i style="background:' + getColor(from) + '"></i> ' + from.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    );
+                }
+
+                else if ( i == 0 ) {
+
+                    labels.push(
+                        '<i style="background:' + getColor(from) + '"></i> ' + from.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + ' or less'
+                    );
+
+                }
+                else {
+
+                    labels.push(
+                        '<i style="background:' + getColor(from) + '"></i> ' +
+                        from.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + ((i + 1) < grades.length ? '&ndash;' + to.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : ' or more'));
+                }
+            }
+
+
+        }
+        else {
+
+
+            var div = L.DomUtil.create('div', 'info legend'),
+                //grades = [0, mapRound(0.05*max_workers_diff), mapRound(0.15*max_workers_diff), mapRound(0.30*max_workers_diff), mapRound(0.45*max_workers_diff), mapRound(0.60*max_workers_diff), mapRound(0.75*max_workers_diff), mapRound(0.90*max_workers_diff)],
+                
+
+                grades = display_grades,
+
+                labels = [],
+                from, to;
+
+            for (var i = 0; i < grades.length; i++) {
+                from = grades[i];
+                to = grades[i + 1];
+
+                if ( from == 0 ) {
+                    labels.push(
+                        '<i style="background:' + getColor(from) + '"></i> ' + from.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                    );
+                }
+
+                labels.push(
+                    '<i style="background:' + getColor(from) + '"></i> ' +
+                    from.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (to ? '&ndash;' + to.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") : '+'));
+            }
+
+
+        }
+
+
+        div.innerHTML = labels.join('<br>');
+        return div;
+    };
+
+
+
+
+$(document).ready(function() {
+
+
+    // Pull in zipcode data
+    $.getJSON( "{{ url_for('static', filename='json/de_census_blocklevel_worker_flow.json') }}", function() {
+        })
+        .done(function( boundary_data ) {
+
+
+                    for (i in boundary_data.features) {
+
+                        //console.log(boundary_data.features[i])
+
+                        // "name":"19962","zipcode":19962,"num_contrib":"8","total_amount":"3400.00"
+
+                            // Javascript doesn't like decimal notation ...
+                            if ( parseInt(max_workers_diff) < parseInt(boundary_data.features[i].properties.workers_diff) ) {
+                                 max_workers_diff = boundary_data.features[i].properties.workers_diff;
+                            }
+
+                            //console.log('testing:', +min_workers_diff+ ', '+ boundary_data.features[i].properties.workers_diff)
+
+                            if ( min_workers_diff > boundary_data.features[i].properties.workers_diff ) {
+                                 min_workers_diff = boundary_data.features[i].properties.workers_diff;
+                            }
+
+
+                    }
+
+                    //alert(min_workers_diff + ' // ' + max_workers_diff );
+
+                    geojson = L.geoJson(boundary_data, {
+                        style: style,
+                        onEachFeature: onEachFeature
+                    }).addTo(zipcode_map);
+
+
+                    legend.addTo(zipcode_map);
+
+
+
+
+
+        })
+        .fail(function(error) {
+            console.log( "error: " + error.responseText );
+            for ( e in  error ) {
+                console.log(e);
+            }
+        });
+
+});
+
+</script>
+
+{% endblock %}
