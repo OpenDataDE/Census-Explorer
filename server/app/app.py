@@ -54,3 +54,10 @@ def census_data(data_type):
         available_data_endpoints=available_data_endpoints.keys(),
         category=category,
         description=description)
+
+
+
+@app.route('/worker-flow')
+def worker_flow():
+    return render_template('worker_flow.html',
+        available_data_endpoints=available_data_endpoints.keys())
